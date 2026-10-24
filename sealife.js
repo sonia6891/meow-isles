@@ -2,7 +2,8 @@ import * as THREE from 'three';
 import { mat, mesh, box, rbox, cyl } from './kit.js';
 
 // Life around the island: ships on looping routes, whales that surface and dive,
-// dolphins leaping along the west coast, and gulls circling overhead. Water level is y = 0.
+// dolphins leaping off the southern tip, and now and then a flock of gulls crossing the open sea.
+// Water level is y = 0.
 
 function ship(kind) {
   const g = new THREE.Group();
@@ -95,11 +96,18 @@ export function buildSeaLife(scene) {
     return { obj, offset: i * 0.45 };
   });
 
-  const gulls = Array.from({ length: 7 }, (_, i) => {
-    const obj = gull();
-    scene.add(obj);
-    return { obj, r: 8 + (i % 4) * 4, h: 9 + (i % 3) * 2, speed: 0.25 + (i % 3) * 0.08, phase: i * 0.9, cx: i % 2 ? 3 : -3, cz: i < 4 ? -8 : 10 };
-  });
+  // Gulls: now and then a small V-shaped flock crosses over open sea, then is gone for a while.
+  // Routes stay well off the coast so the birds never pass between the camera and the islands.
+  const ROUTES = [[[-27, -48], [-25, 48]], [[26, 48], [24, -48]], [[-48, 42], [48, 44]], [[46, -40], [-46, -44]]];
+  const V = [[0, 0], [-1.2, -1.0], [-1.2, 1.0], [-2.4, -2.0], [-2.4, 2.0]];
+  const flock = { birds: V.map(() => { const obj = gull(); obj.visible = false; scene.add(obj); return obj; }), route: ROUTES[0], dur: 1, t: 0, flying: false, wait: 6 };
+  const startFlight = () => {
+    flock.route = ROUTES[Math.floor(Math.random() * ROUTES.length)];
+    const [[ax, az], [bx, bz]] = flock.route;
+    flock.dur = Math.hypot(bx - ax, bz - az) / 6; // about 6 units a second
+    flock.t = 0;
+    flock.flying = true;
+  };
 
   return {
     update(dt, t) {
@@ -143,14 +151,29 @@ export function buildSeaLife(scene) {
         d.obj.rotation.set(0, heading > 0 ? 0 : Math.PI, Math.cos(u * Math.PI) * 0.9);
       }
 
-      for (const g of gulls) {
-        const a = g.phase + t * g.speed;
-        g.obj.position.set(g.cx + Math.cos(a) * g.r, g.h + Math.sin(t * 0.7 + g.phase) * 0.6, g.cz + Math.sin(a) * g.r);
-        g.obj.rotation.y = -a - Math.PI / 2 + Math.PI;
-        const flap = Math.sin(t * 8 + g.phase) * 0.6;
-        g.obj.userData.wings[0].rotation.x = flap;
-        g.obj.userData.wings[1].rotation.x = -flap;
+      // Flock: wait unseen for 20–35 s, fly one route across, repeat.
+      if (!flock.flying) {
+        flock.wait -= dt;
+        if (flock.wait <= 0) startFlight();
+      } else if ((flock.t += dt) > flock.dur) {
+        flock.flying = false;
+        flock.wait = 20 + Math.random() * 15;
       }
+      const flying = flock.flying;
+      const [[ax, az], [bx, bz]] = flock.route;
+      const u = Math.min(1, flock.t / flock.dur);
+      const dirX = (bx - ax) / Math.hypot(bx - ax, bz - az), dirZ = (bz - az) / Math.hypot(bx - ax, bz - az);
+      flock.birds.forEach((b, i) => {
+        b.visible = flying;
+        if (!flying) return;
+        const [back, side] = V[i];
+        // Formation offsets: `back` along the flight line, `side` across it.
+        b.position.set(ax + (bx - ax) * u + dirX * back * 1.4 - dirZ * side * 1.4, 7 + Math.sin(t * 1.3 + i) * 0.3, az + (bz - az) * u + dirZ * back * 1.4 + dirX * side * 1.4);
+        b.rotation.y = Math.atan2(-dirZ, dirX);
+        const flap = Math.sin(t * 8 + i * 0.7) * 0.6;
+        b.userData.wings[0].rotation.x = flap;
+        b.userData.wings[1].rotation.x = -flap;
+      });
     },
   };
 }
