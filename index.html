@@ -1,0 +1,414 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="排成台灣形狀的 3D 貓島：摸貓賺小魚乾、擺東西引來稀有貓、玩五個小遊戲，還能自己當一隻貓走遍全島。">
+<meta property="og:title" content="喵嶼群島">
+<meta property="og:description" content="排成台灣形狀的 3D 貓島，摸貓、收集圖鑑、玩小遊戲，還能自己當一隻貓。">
+<style>body { margin: 0; }</style>
+<title>喵嶼群島</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600&family=Huninn&family=Noto+Sans+TC:wght@400;500;700&display=swap">
+<style>
+/* Layout: a full-bleed 3D lake; brand and toolbar float top-left, the island index docks right
+   (a bottom sheet on phones), and an island's card opens on the left. */
+:root {
+  --paper: #F8F6FB; --card: #FFFFFF; --ink: #2A2742; --muted: #6E6987; --line: #E4DFEC;
+  --accent: #E46A8C; --soft: #F3EEF8; --shadow: 0 10px 30px rgba(42, 39, 66, .14);
+  --display: "Huninn", "Noto Sans TC", system-ui, sans-serif;
+  --body: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+  --latin: "Fredoka", "Noto Sans TC", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --paper: #1F1D2E; --card: #29263C; --ink: #F1EEF8; --muted: #A9A4C2; --line: #3B3854;
+  --accent: #F28CA8; --soft: #332F49; --shadow: 0 10px 30px rgba(0, 0, 0, .4); color-scheme: dark } }
+:root[data-theme="dark"] {
+  --paper: #1F1D2E; --card: #29263C; --ink: #F1EEF8; --muted: #A9A4C2; --line: #3B3854;
+  --accent: #F28CA8; --soft: #332F49; --shadow: 0 10px 30px rgba(0, 0, 0, .4); color-scheme: dark }
+
+*, *::before, *::after { box-sizing: border-box; }
+html, body { height: 100%; overflow: hidden; }
+[hidden] { display: none !important; }
+body { background: var(--paper); color: var(--ink); font: 14px/1.6 var(--body); }
+#stage { position: fixed; inset: 0; }
+#stage canvas { display: block; }
+.labels { position: absolute; inset: 0; touch-action: none; }
+.labels.off .pin { visibility: hidden; }
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.pin { display: flex; align-items: center; gap: 6px; padding: 3px 10px 3px 6px; border: 0; border-radius: 999px;
+  background: var(--card); color: var(--ink); box-shadow: 0 3px 10px rgba(30, 25, 50, .22); font-size: 12.5px; font-weight: 500;
+  white-space: nowrap; cursor: pointer; transition: transform .15s; }
+.pin:hover { transform: translateY(-2px); }
+.islet { font-size: 11.5px; color: var(--muted); background: color-mix(in srgb, var(--card) 70%, transparent);
+  padding: 1px 8px; border-radius: 999px; pointer-events: none; white-space: nowrap; }
+.labels.off .islet { visibility: hidden; }
+.pin.mini { padding: 4px; gap: 0; }
+.pin.mini span { display: none; }
+.pin i { width: 10px; height: 10px; border-radius: 50%; background: var(--c); box-shadow: 0 0 0 2px color-mix(in srgb, var(--c) 35%, transparent); }
+
+.float { position: fixed; background: var(--card); border-radius: 18px; box-shadow: var(--shadow); }
+.top { position: fixed; z-index: 3; top: calc(16px + env(safe-area-inset-top, 0px)); left: max(16px, env(safe-area-inset-left, 0px));
+  display: grid; gap: 10px; justify-items: start; }
+.brand { position: static; padding: 12px 18px 12px 16px; display: flex; align-items: center; gap: 12px; }
+.brand .mascot { width: 58px; height: 50px; flex: none; margin: -4px -2px -4px -6px; filter: drop-shadow(0 2px 3px rgba(30, 25, 50, .2)); }
+.brand h1 { margin: 0; font: 400 28px/1 var(--display); letter-spacing: .04em; }
+.brand p { margin: 4px 0 0; font: 500 11px/1.2 var(--latin); letter-spacing: .14em; color: var(--muted); text-transform: uppercase; }
+.brand p span { font-family: var(--body); letter-spacing: .04em; text-transform: none; }
+
+.tools { position: static; display: flex; flex-wrap: wrap; gap: 6px; padding: 6px; border-radius: 14px; }
+.seg { display: flex; background: var(--soft); border-radius: 10px; padding: 2px; }
+.tools button { border: 0; background: transparent; padding: 6px 11px; border-radius: 8px; cursor: pointer; font-size: 13px; color: var(--muted); }
+.tools button:hover { color: var(--ink); }
+.tools > button[aria-pressed="true"] { background: color-mix(in srgb, var(--accent) 20%, transparent); color: var(--ink); }
+.seg button[aria-pressed="true"] { background: var(--card); color: var(--ink); box-shadow: 0 1px 4px rgba(30, 25, 50, .18); }
+
+#panel { z-index: 2; top: calc(16px + env(safe-area-inset-top, 0px)); bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  right: max(16px, env(safe-area-inset-right, 0px)); width: 340px; display: flex; flex-direction: column; overflow: hidden; }
+.phead { padding: 20px 20px 12px; display: grid; gap: 4px; }
+.eyebrow { font: 600 11px/1 var(--latin); letter-spacing: .16em; text-transform: uppercase; color: var(--accent); }
+.phead h2 { margin: 2px 0 0; font: 400 24px/1.25 var(--display); text-wrap: balance; }
+#stats { margin: 0; color: var(--muted); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.search { margin-top: 10px; display: flex; align-items: center; gap: 8px; padding: 0 12px; height: 40px; border-radius: 12px; background: var(--soft); }
+.search svg { width: 16px; height: 16px; color: var(--muted); flex: none; }
+#search { flex: 1; min-width: 0; border: 0; background: transparent; font: inherit; color: var(--ink); outline: none; }
+#search::placeholder { color: var(--muted); }
+.search:focus-within { box-shadow: 0 0 0 2px var(--accent); }
+#sheetToggle { display: none; }
+#islandList { list-style: none; margin: 0; padding: 4px 10px 14px; overflow-y: auto; flex: 1; min-height: 0; }
+#islandList li + li { border-top: 1px solid var(--line); }
+.isle { width: 100%; display: grid; grid-template-columns: 34px 1fr auto; align-items: center; gap: 12px; padding: 9px 10px;
+  border: 0; border-radius: 12px; background: transparent; text-align: left; cursor: pointer; }
+.isle:hover, .isle[aria-current="true"] { background: color-mix(in srgb, var(--c) 22%, transparent); }
+.hex { width: 34px; height: 38px; display: grid; place-items: center; background: var(--c); color: #2A2742;
+  clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%); font: 400 16px/1 var(--display); }
+.nm { display: grid; font-weight: 500; line-height: 1.3; min-width: 0; }
+.nm small { font: 400 11.5px/1.3 var(--latin); color: var(--muted); letter-spacing: .02em; }
+.ct { font: 500 13px/1 var(--latin); color: var(--muted); font-variant-numeric: tabular-nums; }
+.ct::after { content: " 處"; font-family: var(--body); font-size: 11.5px; }
+.hit { display: flex; justify-content: space-between; gap: 10px; width: calc(100% - 46px); margin: 0 0 6px 46px; padding: 6px 10px;
+  border: 0; border-radius: 8px; background: var(--soft); text-align: left; font-size: 13px; cursor: pointer; }
+.hit em, details em { font-style: normal; font-size: 11.5px; color: var(--muted); white-space: nowrap; }
+.empty { padding: 18px 10px; color: var(--muted); }
+
+#detail { z-index: 2; left: max(16px, env(safe-area-inset-left, 0px)); top: 214px; width: 340px;
+  max-height: calc(100% - 230px - env(safe-area-inset-bottom, 0px)); overflow-y: auto; padding: 18px 20px 20px; }
+.dhead { display: grid; grid-template-columns: 44px 1fr 32px; gap: 12px; align-items: center; }
+.dhead .hex { width: 44px; height: 50px; font-size: 22px; }
+.dhead h2 { margin: 2px 0 0; font: 400 24px/1.15 var(--display); }
+#dEyebrow { color: color-mix(in srgb, var(--c) 55%, var(--ink)); }
+#dClose { width: 32px; height: 32px; border: 0; border-radius: 50%; background: var(--soft); cursor: pointer; font-size: 18px; line-height: 1; align-self: start; }
+#dBlurb { margin: 14px 0 10px; }
+#dQuote { margin: 0 0 12px; padding: 2px 0 2px 12px; border-left: 3px solid var(--c); color: var(--muted); }
+#dTags { display: flex; flex-wrap: wrap; gap: 6px; }
+#dTags span { padding: 2px 10px; border-radius: 999px; background: color-mix(in srgb, var(--c) 28%, transparent); font-size: 12px; }
+#detail h3 { margin: 18px 0 6px; font: 600 11px/1 var(--latin); letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
+#dItems { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+details { border-radius: 12px; background: var(--soft); }
+summary { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 9px 12px; cursor: pointer; list-style: none; font-weight: 500; }
+summary::-webkit-details-marker { display: none; }
+summary span::before { content: ""; display: inline-block; width: 7px; height: 7px; margin-right: 8px; border-radius: 50%; background: var(--c); vertical-align: 2px; }
+details p { margin: 0; padding: 0 12px 10px 27px; color: var(--muted); font-size: 13px; }
+
+#hint { position: fixed; z-index: 1; left: max(16px, env(safe-area-inset-left, 0px)); bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  padding: 7px 14px; border-radius: 999px; background: color-mix(in srgb, var(--card) 88%, transparent); box-shadow: var(--shadow);
+  font-size: 12.5px; color: var(--muted); transition: opacity .6s; }
+#hint.gone { opacity: 0; pointer-events: none; }
+.has-detail #hint { display: none; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* ---------- game layer ---------- */
+.hudbar { position: static; display: flex; align-items: center; gap: 6px; padding: 5px 6px 5px 12px; border-radius: 14px; }
+.fish { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--muted); }
+.fish svg { width: 24px; height: 14px; }
+.fish b { font: 600 17px/1 var(--latin); color: var(--ink); font-variant-numeric: tabular-nums; min-width: 2ch; }
+.fish.bump b { animation: bump .35s; }
+@keyframes bump { 40% { transform: scale(1.3); color: var(--accent); } }
+#openDex { border: 0; border-radius: 9px; padding: 6px 12px; background: var(--ink); color: var(--paper); cursor: pointer; font-size: 13px; }
+
+.heart { padding: 2px 8px; border-radius: 999px; background: #E46A8C; color: #fff; font: 600 13px/1.4 var(--latin);
+  pointer-events: none; animation: rise 1.1s ease-out forwards; }
+@keyframes rise { from { transform: translateY(0); opacity: 1; } to { transform: translateY(-36px); opacity: 0; } }
+
+#toasts { position: fixed; z-index: 6; top: calc(16px + env(safe-area-inset-top, 0px)); left: 50%; transform: translateX(-50%);
+  display: grid; gap: 6px; justify-items: center; pointer-events: none; width: min(420px, calc(100% - 32px)); }
+.toast { margin: 0; padding: 8px 16px; border-radius: 12px; background: var(--ink); color: var(--paper); font-size: 13px;
+  box-shadow: var(--shadow); text-align: center; animation: drop .3s; transition: opacity .5s; }
+.toast.out { opacity: 0; }
+@keyframes drop { from { transform: translateY(-8px); opacity: 0; } }
+
+#catCard { z-index: 4; left: 50%; transform: translateX(calc(-50% - 180px)); bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  display: flex; gap: 12px; align-items: center; padding: 10px 16px 10px 10px; max-width: min(380px, calc(100% - 32px)); }
+.has-detail #catCard { left: 372px; transform: none; }
+#catCard svg { width: 48px; height: 48px; flex: none; }
+#catCard div { display: grid; min-width: 0; }
+#catCard small { color: var(--muted); font-size: 12px; }
+.gain { font-size: 12.5px; color: var(--accent); font-weight: 500; }
+.hearts { color: #E46A8C; letter-spacing: 1px; font-size: 13px; }
+.hearts i { font-style: normal; color: var(--line); }
+
+.slotNow { margin: 0 0 8px; font-size: 13px; color: var(--muted); }
+.slotNow b, .buy b { display: inline-block; width: 10px; height: 10px; border-radius: 3px; background: var(--c); margin-right: 6px; }
+.slotNow strong { color: var(--ink); font-weight: 600; }
+.shop { display: grid; gap: 4px; }
+.buy { display: grid; grid-template-columns: 16px 1fr auto; align-items: center; gap: 6px; padding: 7px 10px; border: 1px solid var(--line);
+  border-radius: 10px; background: transparent; text-align: left; cursor: pointer; }
+.buy:hover:not(:disabled) { border-color: var(--accent); }
+.buy:disabled { opacity: .45; cursor: not-allowed; }
+.buy span { display: grid; font-size: 13px; line-height: 1.3; }
+.buy small { color: var(--muted); font-size: 11.5px; }
+.buy em { font: 600 13px/1 var(--latin); font-style: normal; color: var(--ink); }
+.buy em::after { content: " 魚乾"; font: 400 11px var(--body); color: var(--muted); }
+
+#dex { position: fixed; inset: 0; z-index: 8; display: grid; place-items: center; background: rgba(20, 18, 34, .45);
+  padding: calc(16px + env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) calc(16px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); }
+#dex[hidden] { display: none; }
+.dexBox { position: relative; width: min(760px, 100%); max-height: 100%; overflow-y: auto; padding: 20px; }
+.dexBox header { display: flex; justify-content: space-between; align-items: start; gap: 12px; }
+.dexBox h2 { margin: 4px 0 0; font: 400 24px/1.2 var(--display); }
+#dexCount { font: 500 15px var(--latin); color: var(--muted); }
+#dexClose { width: 34px; height: 34px; border: 0; border-radius: 50%; background: var(--soft); cursor: pointer; font-size: 18px; }
+.dexTip { margin: 6px 0 14px; color: var(--muted); font-size: 13px; }
+#dexGrid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 8px; }
+#dexGrid li { display: grid; justify-items: center; text-align: center; gap: 2px; padding: 10px 8px; border-radius: 12px; background: var(--soft); }
+#dexGrid li.rare { box-shadow: inset 0 0 0 1.5px #E9C46A; }
+#dexGrid svg { width: 44px; height: 44px; }
+#dexGrid b { font-size: 13.5px; }
+#dexGrid small { font-size: 11px; color: var(--muted); line-height: 1.35; }
+#dexGrid .unknown b { color: var(--muted); }
+
+/* ---------- cat mode ---------- */
+#openCat { border: 0; border-radius: 9px; padding: 6px 12px; background: var(--accent); color: #fff; cursor: pointer; font-size: 13px; }
+.cat-mode #panel, .cat-mode #detail, .cat-mode #hint { display: none !important; }
+.cat-mode .pin { pointer-events: none; }
+#catHud > * { z-index: 5; }
+#cVisit { right: max(16px, env(safe-area-inset-right, 0px)); top: calc(16px + env(safe-area-inset-top, 0px)); margin: 0; padding: 8px 14px;
+  font-weight: 500; font-variant-numeric: tabular-nums; }
+.ckeys { left: 50%; transform: translateX(-50%); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); margin: 0; padding: 7px 14px;
+  font-size: 12.5px; color: var(--muted); white-space: nowrap; }
+.cbtns { position: fixed; right: max(16px, env(safe-area-inset-right, 0px)); bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  display: grid; grid-template-columns: repeat(2, 64px); gap: 8px; }
+.cbtns button { height: 52px; border: 0; border-radius: 16px; background: var(--card); color: var(--ink); box-shadow: var(--shadow);
+  font: 400 18px/1 var(--display); cursor: pointer; }
+.cbtns button:active { transform: scale(.95); }
+#cMeow { background: var(--accent); color: #fff; }
+#cExit { font-size: 15px; }
+#joy { display: none; position: fixed; left: max(24px, env(safe-area-inset-left, 0px)); bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  width: 124px; height: 124px; border-radius: 50%; background: color-mix(in srgb, var(--card) 55%, transparent);
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--ink) 18%, transparent); touch-action: none; }
+#joy span { position: absolute; left: 50%; top: 50%; width: 52px; height: 52px; margin: -26px 0 0 -26px; border-radius: 50%;
+  background: var(--card); box-shadow: var(--shadow); }
+@media (pointer: coarse), (max-width: 759px) { #joy { display: block; } .ckeys { display: none; } }
+@media (max-width: 759px) { #cVisit { top: calc(186px + env(safe-area-inset-top, 0px)); font-size: 13px; padding: 6px 12px; } }
+.meow { padding: 3px 10px; border-radius: 12px 12px 12px 2px; background: #fff; color: #2A2742; font: 400 15px/1.3 var(--display);
+  box-shadow: 0 3px 10px rgba(30, 25, 50, .25); pointer-events: none; }
+
+/* ---------- mini-games ---------- */
+.playBtn { margin-top: 12px; width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 14px;
+  border: 0; border-radius: 12px; background: var(--c); color: #2A2742; font-weight: 600; cursor: pointer; }
+.playBtn small { font-weight: 400; font-size: 12px; opacity: .8; }
+#gameLayer { position: fixed; inset: 0; z-index: 9; display: grid; place-items: center; background: rgba(20, 18, 34, .5);
+  padding: calc(16px + env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) calc(16px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); }
+#gameBox { position: relative; width: min(640px, 100%); max-height: 100%; overflow: auto; padding: 16px; display: grid; gap: 12px; }
+.ghead { display: grid; grid-template-columns: 1fr auto 34px; align-items: center; gap: 12px; }
+.ghead h2 { margin: 2px 0 0; font: 400 22px/1.2 var(--display); }
+.gmeta { display: flex; gap: 12px; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.gmeta b { font: 600 18px/1 var(--latin); color: var(--ink); }
+#gClose { width: 34px; height: 34px; border: 0; border-radius: 50%; background: var(--soft); cursor: pointer; font-size: 18px; }
+.gbody { position: relative; }
+#gStage { position: relative; height: min(420px, 58vh); border-radius: 14px; overflow: hidden; background: var(--soft); touch-action: none; user-select: none; }
+#gStage canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+.gpanel { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 10px; padding: 24px; text-align: center;
+  border-radius: 14px; background: color-mix(in srgb, var(--card) 92%, transparent); }
+.gpanel p { margin: 0; max-width: 34ch; }
+#gBest { color: var(--muted); font-size: 13px; }
+#gFinal { font: 400 26px/1.2 var(--display); }
+#gPrize { color: var(--accent); font-weight: 500; }
+.grow { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.gpanel button { border: 0; border-radius: 10px; padding: 9px 20px; cursor: pointer; background: var(--soft); font-size: 14px; }
+.gpanel button.primary { background: var(--ink); color: var(--paper); }
+
+.shellStage { background: linear-gradient(#F3E7D6, #E2C9A5) !important; }
+.sbox { position: absolute; bottom: 20%; width: 26%; max-width: 150px; aspect-ratio: 1 / .78; transform: translateX(-50%);
+  border: 0; border-radius: 10px; background: #C89A63; cursor: pointer; transition: left var(--speed, 300ms) ease-in-out; padding: 0; }
+.sbox::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 18%; background: #B98955; border-radius: 10px 10px 0 0; }
+.sbox i { position: absolute; left: 42%; right: 42%; top: 0; bottom: 0; background: #E9D2A6; }
+.sbox:disabled { cursor: default; }
+.sbox:not(:disabled):hover { outline: 3px solid var(--accent); outline-offset: 2px; }
+.peek { position: absolute; left: 20%; right: 20%; bottom: 55%; opacity: 0; transform: translateY(40%); transition: opacity .2s, transform .25s; }
+.sbox.show .peek { opacity: 1; transform: translateY(-6%); }
+.sbox.wrong { animation: nope .4s; outline: 3px solid #E05D5D; }
+@keyframes nope { 25% { margin-left: -6px; } 75% { margin-left: 6px; } }
+.smsg { position: absolute; top: 14px; left: 0; right: 0; margin: 0; text-align: center; color: #2A2742; font-weight: 500; }
+
+.memStage { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; padding: 14px; background: linear-gradient(#E3F1D9, #CDE5C0) !important; }
+.card { position: relative; border: 0; border-radius: 12px; cursor: pointer; padding: 0; background: #6FAE6A; min-height: 0; }
+.card .back { position: absolute; inset: 6px; border-radius: 8px; border: 2px dashed rgba(255, 255, 255, .55); }
+.card .front { display: none; position: absolute; inset: 0; place-items: center; border-radius: 12px; background: #FBF7F2; }
+.card .front svg { width: 64%; max-width: 70px; height: auto; }
+.card.up .front { display: grid; }
+.card.done { box-shadow: 0 0 0 3px #F4D27A; }
+
+@media (max-width: 759px) {
+  .hudbar { padding: 4px 4px 4px 10px; }
+  #catCard { transform: translateX(-50%); bottom: calc(176px + env(safe-area-inset-bottom, 0px)); }
+  .has-detail #catCard { bottom: auto; top: calc(150px + env(safe-area-inset-top, 0px)); }
+  #toasts { top: auto; bottom: calc(240px + env(safe-area-inset-bottom, 0px)); }
+}
+
+@media (max-width: 759px) {
+  .top { right: max(16px, env(safe-area-inset-right, 0px)); top: calc(10px + env(safe-area-inset-top, 0px)); gap: 8px; }
+  .brand { padding: 8px 14px 8px 10px; border-radius: 14px; }
+  .brand .mascot { width: 44px; height: 38px; margin: -2px -2px -2px -4px; }
+  .brand h1 { font-size: 22px; }
+  .tools button { padding: 5px 9px; font-size: 12.5px; }
+  #panel { top: auto; left: 0; right: 0; bottom: 0; width: auto; max-height: 64%; border-radius: 20px 20px 0 0;
+    padding-bottom: env(safe-area-inset-bottom, 0px); }
+  .phead { padding: 8px max(16px, env(safe-area-inset-right, 0px)) 10px max(16px, env(safe-area-inset-left, 0px)); }
+  .phead h2 { font-size: 20px; }
+  #sheetToggle { display: block; justify-self: center; width: 64px; height: 18px; margin-bottom: 2px; border: 0; background: transparent; cursor: pointer; position: relative; }
+  #sheetToggle::before { content: ""; position: absolute; left: 14px; right: 14px; top: 6px; height: 5px; border-radius: 3px; background: var(--line); }
+  #islandList { display: none; padding-left: max(8px, env(safe-area-inset-left, 0px)); padding-right: max(8px, env(safe-area-inset-right, 0px)); }
+  .sheet-open #islandList { display: block; }
+  .has-detail #panel { display: none; }
+  #detail { left: 0; right: 0; top: auto; bottom: 0; width: auto; max-height: 56%; border-radius: 20px 20px 0 0;
+    padding: 16px max(16px, env(safe-area-inset-right, 0px)) calc(16px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); }
+  #hint { bottom: calc(172px + env(safe-area-inset-bottom, 0px)); right: max(16px, env(safe-area-inset-right, 0px)); text-align: center; }
+}
+@media (prefers-reduced-motion: reduce) { .pin, #hint { transition: none; } }
+</style>
+
+<div id="stage" aria-label="喵嶼群島的 3D 地圖，可以拖曳旋轉、縮放，點島檢視"></div>
+
+<div class="top">
+  <header class="float brand">
+    <svg class="mascot" viewBox="0 0 120 104" aria-hidden="true">
+      <!-- The ragdoll kitten, waving: cream face, taupe ears and blaze, blue eyes, pink beans. -->
+      <g stroke="#fff" stroke-width="7" stroke-linejoin="round" fill="#fff">
+        <path d="M26 68 C24 52 26 40 31 32 L35 8 L53 25 C60 23 68 23 75 25 L94 8 L98 32 C103 40 105 52 103 68 C100 86 84 96 64 96 C44 96 28 86 26 68 Z"/>
+        <ellipse cx="30" cy="80" rx="15" ry="17" transform="rotate(-15 30 80)"/>
+      </g>
+      <path d="M26 68 C24 52 26 40 31 32 L35 8 L53 25 C60 23 68 23 75 25 L94 8 L98 32 C103 40 105 52 103 68 C100 86 84 96 64 96 C44 96 28 86 26 68 Z" fill="#F7F1EA"/>
+      <path d="M31 32 L35 8 L53 25 C46 27 38 29 31 32 Z M98 32 L94 8 L75 25 C82 27 90 29 98 32 Z" fill="#B3A7A1"/>
+      <path d="M37.5 15 L48 26 L35 29 Z M90.5 15 L80 26 L93 29 Z" fill="#F2B8C0"/>
+      <path d="M64 25 C55 25 50 31 52 39 C54 46 59 51 64 55 C69 51 74 46 76 39 C78 31 73 25 64 25 Z" fill="#C9BDB6"/>
+      <path d="M62.6 26 L65.4 26 L64.7 51 L63.3 51 Z" fill="#F7F1EA"/>
+      <path d="M26 68 C24 52 26 40 31 32 L35 8 L53 25 C60 23 68 23 75 25 L94 8 L98 32 C103 40 105 52 103 68 C100 86 84 96 64 96 C44 96 28 86 26 68 Z" fill="none" stroke="#2A2742" stroke-width="2.4" stroke-linejoin="round"/>
+      <ellipse cx="42" cy="73" rx="5" ry="3" fill="#F5B5BE" opacity=".6"/><ellipse cx="86" cy="73" rx="5" ry="3" fill="#F5B5BE" opacity=".6"/>
+      <g fill="#3E5A86"><ellipse cx="49" cy="60" rx="8.5" ry="9.5"/><ellipse cx="79" cy="60" rx="8.5" ry="9.5"/></g>
+      <g fill="#1d1b22"><ellipse cx="49" cy="61" rx="6.4" ry="7.4"/><ellipse cx="79" cy="61" rx="6.4" ry="7.4"/></g>
+      <g fill="#fff"><circle cx="46.4" cy="56.6" r="2.7"/><circle cx="76.4" cy="56.6" r="2.7"/><circle cx="52" cy="64.5" r="1.1"/><circle cx="82" cy="64.5" r="1.1"/></g>
+      <path d="M60 72 Q64 70 68 72 Q66 76.5 64 77 Q62 76.5 60 72 Z" fill="#F2A0A8"/>
+      <path d="M64 77 Q64 81 60 82 M64 77 Q64 81 68 82" fill="none" stroke="#2A2742" stroke-width="1.6" stroke-linecap="round"/>
+      <path d="M92 74 L108 72 M92 78 L107 81" stroke="#2A2742" stroke-opacity=".3" stroke-width="1.2" stroke-linecap="round"/>
+      <ellipse cx="30" cy="80" rx="15" ry="17" transform="rotate(-15 30 80)" fill="#FFFDFB" stroke="#2A2742" stroke-width="2.4"/>
+      <g fill="#F2A0A8"><path d="M24 85 C24 80 36 80 36 85 C36 90 31.5 92 30 90 C28.5 92 24 90 24 85 Z"/>
+        <circle cx="21.5" cy="77" r="2.6"/><circle cx="26" cy="72.2" r="2.8"/><circle cx="32.2" cy="71.6" r="2.8"/><circle cx="37" cy="75.6" r="2.6"/></g>
+    </svg>
+    <div><h1>喵嶼群島</h1><p>Meow Isles · <span>一座給貓住的城市</span></p></div>
+  </header>
+  <nav class="float tools" aria-label="地圖工具">
+    <div class="seg" role="group" aria-label="時段">
+      <button type="button" data-time="day" aria-pressed="true">白天</button>
+      <button type="button" data-time="dusk" aria-pressed="false">黃昏</button>
+      <button type="button" data-time="night" aria-pressed="false">夜晚</button>
+    </div>
+    <button type="button" id="tLabels" aria-pressed="true">標籤</button>
+    <button type="button" id="tPause" aria-pressed="false">暫停</button>
+    <button type="button" id="tHome">全景</button>
+  </nav>
+  <div class="float hudbar">
+    <span id="fishPill" class="fish" title="小魚乾：摸貓、玩小遊戲可以得到">
+      <svg viewBox="0 0 24 14" aria-hidden="true"><path d="M2 7 Q9 0 17 4 L22 1 L21 7 L22 13 L17 10 Q9 14 2 7 Z" fill="#8FA9B8" stroke="#2A2742" stroke-width="1.4" stroke-linejoin="round"/><circle cx="7" cy="6" r="1.2" fill="#2A2742"/></svg>
+      <b id="fishN">0</b><span>小魚乾</span>
+    </span>
+    <button type="button" id="openDex">貓咪圖鑑</button>
+    <button type="button" id="openCat">當一隻貓</button>
+  </div>
+</div>
+
+<div id="catHud" hidden>
+  <p id="cVisit" class="float">走過 0 / 12 座島</p>
+  <p class="ckeys float">WASD 或方向鍵走路 · Shift 跑步 · 空白鍵跳 · M 喵 · Z 睡覺 · Esc 離開</p>
+  <div id="joy" aria-hidden="true"><span></span></div>
+  <div class="cbtns">
+    <button type="button" id="cMeow">喵</button>
+    <button type="button" id="cJump">跳</button>
+    <button type="button" id="cNap">睡覺</button>
+    <button type="button" id="cExit">離開</button>
+  </div>
+</div>
+
+<div id="toasts" aria-live="polite"></div>
+<div id="catCard" class="float" hidden aria-live="polite"></div>
+
+<div id="dex" hidden>
+  <section class="dexBox float" role="dialog" aria-modal="true" aria-labelledby="dexTitle">
+    <header><div><span class="eyebrow">Cat Catalog</span><h2 id="dexTitle">貓咪圖鑑 <span id="dexCount"></span></h2></div>
+      <button type="button" id="dexClose" aria-label="關閉圖鑑">×</button></header>
+    <p class="dexTip">點島上的貓可以摸它，第一次摸到就會記進圖鑑。稀有貓要在島上的空位擺東西才會來。</p>
+    <ul id="dexGrid"></ul>
+  </section>
+</div>
+
+<div id="gameLayer" hidden>
+  <section id="gameBox" class="float" role="dialog" aria-modal="true" aria-labelledby="gTitle">
+    <header class="ghead">
+      <div><span class="eyebrow">Mini Game</span><h2 id="gTitle"></h2></div>
+      <div class="gmeta"><span>分數 <b id="gScore">0</b></span><span id="gClockWrap">剩 <b id="gClock"></b> 秒</span></div>
+      <button type="button" id="gClose" aria-label="關閉小遊戲">×</button>
+    </header>
+    <div class="gbody">
+      <div id="gStage"></div>
+      <div id="gIntro" class="gpanel"><p id="gHow"></p><p id="gBest"></p><button type="button" id="gStart" class="primary">開始</button></div>
+      <div id="gResult" class="gpanel" hidden><p id="gFinal"></p><p id="gPrize"></p>
+        <div class="grow"><button type="button" id="gAgain" class="primary">再玩一次</button><button type="button" id="gDone">回到島上</button></div></div>
+    </div>
+  </section>
+</div>
+
+<aside id="panel" class="float" aria-label="島嶼索引">
+  <div class="phead">
+    <button type="button" id="sheetToggle" aria-expanded="false" aria-controls="islandList"><span class="sr">展開或收起島嶼清單</span></button>
+    <span class="eyebrow">Island Index</span>
+    <h2>今天去哪座島打滾？</h2>
+    <p id="stats"></p>
+    <label class="search" for="search">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="7" cy="7" r="5"/><path d="M11 11 L14.5 14.5" stroke-linecap="round"/></svg>
+      <span class="sr">搜尋島嶼或去處</span>
+      <input id="search" type="search" placeholder="搜尋島嶼、去處，例如「紙箱」" autocomplete="off">
+    </label>
+  </div>
+  <ul id="islandList"></ul>
+</aside>
+
+<article id="detail" class="float" hidden aria-live="polite">
+  <div class="dhead">
+    <b class="hex" id="dChip"></b>
+    <div><span class="eyebrow" id="dEyebrow"></span><h2 id="dTitle"></h2></div>
+    <button type="button" id="dClose" aria-label="關閉，回到全景">×</button>
+  </div>
+  <p id="dBlurb"></p>
+  <p id="dQuote"></p>
+  <div id="dTags"></div>
+  <div id="dPlay"></div>
+  <h3>島上去處</h3>
+  <ul id="dItems"></ul>
+  <h3>空位</h3>
+  <div id="dSlot"></div>
+</article>
+
+<p id="hint">拖曳轉視角 · 滾輪或雙指縮放 · 點島進去看看 · 點貓可以摸它</p>
+
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+<script type="module" src="app.js"></script>
+
+</html>
