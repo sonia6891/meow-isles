@@ -73,7 +73,7 @@ function measureShift() {
     const sheet = ((selected ? $('#detail') : $('#panel')).getBoundingClientRect().height) || 0;
     shift.tx = 0;
     shift.ty = (top - sheet) / 2;
-    shift.freeW = w;
+    shift.freeW = Math.max(w, 1);
     shift.freeH = Math.max(h - top - sheet, 1);
   } else {
     const p = $('#panel').getBoundingClientRect().width + 24;
@@ -90,13 +90,23 @@ function applyView() {
   camera.aspect = (w + ax) / (h + ay);
   camera.setViewOffset(w + ax, h + ay, shift.x < 0 ? ax : 0, shift.y < 0 ? ay : 0, w, h);
 }
+// A page can load with a 0×0 stage (a hidden tab or a panel still opening). The camera is
+// placed only once the stage has a real size, so the first fit never divides by zero.
+let homed = false;
 function resize() {
   const w = stage.clientWidth, h = stage.clientHeight;
+  if (!w || !h) return;
   renderer.setSize(w, h);
   labels.setSize(w, h);
   measureShift();
   shift.x = shift.tx; shift.y = shift.ty;
   applyView();
+  if (!homed) {
+    const home = homePose();
+    camera.position.copy(home.pos);
+    controls.target.copy(home.target);
+    homed = true;
+  }
 }
 
 function homePose() {
@@ -343,10 +353,6 @@ function declutter() {
 // ---------- loop ----------
 addEventListener('resize', resize);
 resize();
-const home = homePose();
-camera.position.copy(home.pos);
-controls.target.copy(home.target);
-
 const clock = new THREE.Clock();
 renderer.setAnimationLoop(() => {
   const dt = Math.min(clock.getDelta(), 0.05);
