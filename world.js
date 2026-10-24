@@ -4,6 +4,7 @@ import { BUILD, decorate } from './props.js';
 import { makeCat, updateCat, fixCat, COATS } from './cat.js';
 import { resident } from './roster.js';
 import { itemMesh, slotMarker } from './items3d.js';
+import { buildSeaLife } from './sealife.js';
 
 let residents = 0;
 
@@ -193,6 +194,7 @@ export function buildWorld(scene, islandsData, isletsData = []) {
   const base = waterGeo.attributes.position.array.slice();
 
   const { clouds, islets } = surroundings(scene, isletsData, water.material);
+  const sea = buildSeaLife(scene);
   const pos = Object.fromEntries(islandsData.map((d) => [d.id, hexToWorld(d.q, d.r)]));
   const dirsFor = (d) => islandsData
     .filter((o) => o.id === d.to || o.to === d.id)
@@ -272,6 +274,7 @@ export function buildWorld(scene, islandsData, isletsData = []) {
       }
       if (paused) return;
       for (const isl of islands) for (const c of isl.cats) updateCat(c, dt, t, isl);
+      sea.update(dt, t);
       clouds.forEach((c, i) => { c.position.x += dt * (0.6 + i * 0.05); if (c.position.x > 110) c.position.x = -110; });
       const p = waterGeo.attributes.position.array;
       for (let i = 0; i < p.length; i += 3) p[i + 1] = Math.sin(base[i] * 0.18 + t * 1.1) * 0.12 + Math.cos(base[i + 2] * 0.15 + t * 0.8) * 0.1;

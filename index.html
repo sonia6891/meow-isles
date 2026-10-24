@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="description" content="排成台灣形狀的 3D 貓島：摸貓賺小魚乾、擺東西引來稀有貓、玩五個小遊戲，還能自己當一隻貓走遍全島。">
+<meta name="description" content="排成台灣形狀的 3D 貓島：摸貓賺小魚乾、擺東西引來稀有貓、每座島都有小遊戲，還能自己當一隻貓走遍全島。">
 <meta property="og:title" content="喵嶼群島">
 <meta property="og:description" content="排成台灣形狀的 3D 貓島，摸貓、收集圖鑑、玩小遊戲，還能自己當一隻貓。">
 <style>body { margin: 0; }</style>
@@ -179,6 +179,57 @@ details p { margin: 0; padding: 0 12px 10px 27px; color: var(--muted); font-size
 #dexGrid b { font-size: 13.5px; }
 #dexGrid small { font-size: 11px; color: var(--muted); line-height: 1.35; }
 #dexGrid .unknown b { color: var(--muted); }
+
+/* ---------- island games, part two ---------- */
+.kbStage { display: grid !important; grid-template-columns: repeat(5, 1fr); gap: 8px; padding: 18px; align-content: center; background: #D9D3E6 !important; }
+.key { aspect-ratio: 1.15; border: 0; border-radius: 10px; background: #F7F5FA; color: #5C5A6A; font: 600 20px/1 var(--latin);
+  box-shadow: 0 4px 0 #B6AFC6; cursor: pointer; transition: background .1s, transform .08s; }
+.key.lit { background: #F4D27A; color: #2A2742; box-shadow: 0 4px 0 #C99A3B; }
+.key.pawed { transform: translateY(3px); box-shadow: 0 1px 0 #B6AFC6; background: #F2B8C0; }
+
+.scrStage { display: grid !important; place-content: center; gap: 18px; padding: 24px; background: linear-gradient(#EFE3CC, #E2C9A5) !important; cursor: pointer; }
+.scrStage .post { position: relative; width: min(460px, 76vw); height: 54px; border-radius: 12px;
+  background: repeating-linear-gradient(90deg, #CDB283 0 10px, #BFA272 10px 20px); box-shadow: inset 0 0 0 3px #8C6B4F; }
+.scrStage .zone { position: absolute; top: 0; bottom: 0; background: rgba(111, 174, 106, .75); border-radius: 8px; }
+.scrStage .needle { position: absolute; top: -10px; bottom: -10px; width: 5px; margin-left: -2px; border-radius: 3px; background: #2A2742; }
+.scrStage.miss .post { box-shadow: inset 0 0 0 3px #E05D5D; }
+.scrTip { margin: 0; text-align: center; color: #5C4A3A; font-size: 13px; }
+.marks { position: relative; height: 40px; }
+.marks span { position: absolute; top: 0; width: 22px; height: 34px; border-radius: 3px;
+  background: repeating-linear-gradient(100deg, transparent 0 4px, #8C6B4F 4px 6px, transparent 6px 9px); }
+
+.pillStage { display: grid !important; place-content: center; justify-items: center; gap: 22px; background: linear-gradient(#EAF4F2, #CFE5E1) !important; }
+.pmsg { margin: 0; color: #2A2742; font-weight: 500; }
+.jars { display: flex; gap: 14px; }
+.jar { position: relative; width: 70px; height: 96px; border: 0; border-radius: 14px 14px 18px 18px; cursor: pointer;
+  background: color-mix(in srgb, var(--c) 45%, #fff); box-shadow: inset 0 0 0 3px var(--c); transition: transform .1s; }
+.jar i { position: absolute; left: 10px; right: 10px; top: -10px; height: 16px; border-radius: 6px; background: #FBFAF8; box-shadow: inset 0 0 0 2px var(--c); }
+.jar.on { background: var(--c); transform: scale(1.08); box-shadow: 0 0 22px var(--c); }
+.jar:disabled { cursor: default; }
+
+.matchStage { display: grid !important; align-content: center; gap: 16px; padding: 18px; background: linear-gradient(#FFF3F0, #F8DCD8) !important; }
+.wish { display: flex; align-items: center; gap: 12px; justify-self: center; padding: 10px 18px; border-radius: 14px; background: #fff; color: #2A2742; box-shadow: 0 3px 10px rgba(30, 25, 50, .12); }
+.wish svg { width: 54px; height: 54px; }
+.wish div { display: grid; }
+.wish b { font-size: 12px; color: #6E6987; font-weight: 500; }
+.wish span { font: 400 20px/1.3 var(--display); }
+.homes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.home { display: grid; justify-items: center; gap: 6px; padding: 14px 8px; border: 0; border-radius: 14px; background: #fff; color: #2A2742; cursor: pointer; box-shadow: 0 3px 10px rgba(30, 25, 50, .1); }
+.home b { font: 400 16px/1.2 var(--display); }
+.home em { font-style: normal; font-size: 12.5px; padding: 2px 10px; border-radius: 999px; background: #F3EEF8; }
+.home.right { box-shadow: 0 0 0 3px #6FAE6A; }
+.home.wrong { box-shadow: 0 0 0 3px #E05D5D; }
+
+.hushStage { background: linear-gradient(#C9DAEE, #A9C4E8) !important; }
+.sleeper { position: absolute; width: 74px; transform: translate(-50%, -50%); text-align: center; transition: transform .15s; }
+.sleeper svg { width: 74px; height: 74px; }
+.sleeper i { position: absolute; right: -8px; top: -6px; font: 600 14px var(--latin); font-style: normal; color: #4B5A7A; }
+.sleeper.awake { transform: translate(-50%, -62%) rotate(-6deg); }
+.sleeper.awake i { color: #E05D5D; }
+.noise { position: absolute; transform: translate(-50%, -50%); padding: 6px 12px; border: 0; border-radius: 12px; cursor: pointer;
+  background: #fff; color: #2A2742; font: 400 16px/1 var(--display); box-shadow: 0 0 0 3px #E05D5D; animation: fuse var(--life, 1500ms) linear forwards; }
+@keyframes fuse { from { box-shadow: 0 0 0 3px #F4D27A; } to { box-shadow: 0 0 0 6px #E05D5D; } }
+.hlives { position: absolute; left: 14px; top: 10px; margin: 0; color: #E46A8C; font: 600 18px var(--latin); }
 
 /* ---------- cat mode ---------- */
 #openCat { border: 0; border-radius: 9px; padding: 6px 12px; background: var(--accent); color: #fff; cursor: pointer; font-size: 13px; }
